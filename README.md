@@ -223,36 +223,34 @@ npm run test:e2e
 
 ## Production Deployment
 
-### Backend (AWS ECS / DigitalOcean / Railway)
+📖 **Xem hướng dẫn deploy chi tiết:**
+- [DEPLOY_QUICK.md](./DEPLOY_QUICK.md) - Hướng dẫn deploy nhanh trong 15 phút
+- [DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md) - Hướng dẫn deploy đầy đủ với nhiều phương án
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Tài liệu deployment nâng cao
 
-1. Build Docker image:
+### Phương Án Khuyên Dùng
+
+1. **Frontend:** Vercel (miễn phí, tự động deploy từ GitHub)
+2. **Backend:** Railway hoặc Render (miễn phí tier)
+3. **Database:** PostgreSQL với PostGIS (từ Railway/Render)
+4. **Storage:** AWS S3 hoặc DigitalOcean Spaces
+
+### Quick Deploy
+
 ```bash
-cd server
-docker build -t floodrelief-api .
+# 1. Frontend - Vercel
+# - Import GitHub repo
+# - Root: web
+# - Set NEXT_PUBLIC_API_URL và NEXT_PUBLIC_WS_URL
+
+# 2. Backend - Railway
+# - Tạo PostgreSQL service
+# - Deploy từ GitHub (root: server)
+# - Set environment variables
+# - Run: npx prisma migrate deploy
 ```
 
-2. Set environment variables in your hosting platform
-3. Deploy with PostgreSQL + PostGIS database
-4. Run migrations: `npx prisma migrate deploy`
-
-### Frontend (Vercel / Netlify)
-
-1. Set environment variables:
-   - `NEXT_PUBLIC_API_URL` - Your backend URL
-   - `NEXT_PUBLIC_WS_URL` - Your WebSocket URL
-
-2. Deploy:
-```bash
-cd web
-vercel deploy
-```
-
-### Database Setup
-
-Enable PostGIS extension:
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
-```
+Xem chi tiết trong [DEPLOY_QUICK.md](./DEPLOY_QUICK.md)
 
 ## Environment Variables
 
