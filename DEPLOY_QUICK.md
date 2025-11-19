@@ -68,13 +68,10 @@
    NODE_ENV=production
    CORS_ORIGIN=https://floodrelief.vercel.app
    
-   # S3 - Dùng AWS S3 hoặc tạm thời bỏ qua
-   S3_ENDPOINT=https://s3.amazonaws.com
-   S3_ACCESS_KEY=<your-key>
-   S3_SECRET_KEY=<your-secret>
-   S3_BUCKET=floodrelief-images
-   S3_REGION=us-east-1
-   S3_USE_SSL=true
+   # Cloudinary
+   CLOUDINARY_CLOUD_NAME=<your-cloud-name>
+   CLOUDINARY_API_KEY=<your-api-key>
+   CLOUDINARY_API_SECRET=<your-api-secret>
    ```
 
 4. **Deploy:**
@@ -105,13 +102,21 @@
 
 ---
 
-### Bước 5: Setup S3 (AWS) - 5 phút
+### Bước 5: Setup Cloudinary - 3 phút
 
-1. Đăng nhập AWS Console
-2. Tạo S3 bucket: `floodrelief-images`
-3. Tạo IAM user với quyền S3
-4. Lấy Access Key và Secret Key
-5. Cập nhật vào Railway environment variables
+1. Đăng ký Cloudinary miễn phí: https://cloudinary.com/users/register/free
+2. Vào Dashboard → Copy credentials:
+   - Cloud Name
+   - API Key
+   - API Secret
+3. Thêm vào Render environment variables:
+   ```
+   CLOUDINARY_CLOUD_NAME=your-cloud-name
+   CLOUDINARY_API_KEY=your-api-key
+   CLOUDINARY_API_SECRET=your-api-secret
+   ```
+
+**Xem hướng dẫn chi tiết:** [CLOUDINARY_SETUP.md](./CLOUDINARY_SETUP.md)
 
 ---
 

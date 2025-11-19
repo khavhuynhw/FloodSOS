@@ -17,13 +17,10 @@ export const env = {
     return 'http://localhost:3000';
   })(),
   
-  // S3/MinIO
-  S3_ENDPOINT: process.env.S3_ENDPOINT || 'http://localhost:9000',
-  S3_ACCESS_KEY: process.env.S3_ACCESS_KEY || 'minioadmin',
-  S3_SECRET_KEY: process.env.S3_SECRET_KEY || 'minioadmin',
-  S3_BUCKET: process.env.S3_BUCKET || 'floodrelief-images',
-  S3_REGION: process.env.S3_REGION || 'us-east-1',
-  S3_USE_SSL: process.env.S3_USE_SSL === 'true',
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
   
   // Rate limiting
   RATE_LIMIT_MAX_REQUESTS_PER_IP: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS_PER_IP || '5', 10),

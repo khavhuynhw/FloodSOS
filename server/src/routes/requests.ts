@@ -6,8 +6,6 @@ import { validatePhone, normalizePhone } from '../utils/phone';
 import { checkIPRateLimit, checkPhoneRateLimit } from '../utils/rateLimit';
 import { env } from '../utils/env';
 import { UrgencyLevel, RequestStatus } from '@prisma/client';
-import { getImageUrl } from '../services/storage';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
 const createRequestSchema = z.object({
   phone: z.string(),
@@ -226,61 +224,6 @@ export async function requestRoutes(fastify: FastifyInstance) {
     } catch (error: any) {
       console.error('Error resolving request:', error);
       return reply.status(500).send({ error: 'Failed to resolve request' });
-    }
-  });
-
-  // Serve images from MinIO
-  fastify.get('/api/images/*', async (request, reply) => {
-    try {
-      const path = (request.params as { '*': string })['*'];
-      if (!path) {
-        return reply.status(400).send({ error: 'Image path required' });
-      }
-
-      // Parse bucket and key from path
-      // Path format: bucket/key or just key
-      const parts = path.split('/');
-      let bucket = env.S3_BUCKET;
-      let key = path;
-
-      if (parts.length > 1 && parts[0] === env.S3_BUCKET) {
-        // Full path: bucket/key
-        key = parts.slice(1).join('/');
-      }
-
-      const s3Client = new S3Client({
-        endpoint: env.S3_ENDPOINT,
-        region: env.S3_REGION,
-        credentials: {
-          accessKeyId: env.S3_ACCESS_KEY,
-          secretAccessKey: env.S3_SECRET_KEY,
-        },
-        forcePathStyle: true,
-      });
-
-      const command = new GetObjectCommand({
-        Bucket: bucket,
-        Key: key,
-      });
-
-      const response = await s3Client.send(command);
-      
-      // Set appropriate headers
-      reply.header('Content-Type', response.ContentType || 'image/jpeg');
-      reply.header('Cache-Control', 'public, max-age=31536000');
-      reply.header('Access-Control-Allow-Origin', env.CORS_ORIGIN || '*');
-      reply.header('Access-Control-Allow-Methods', 'GET');
-      
-      // Stream the image
-      if (response.Body) {
-        const stream = response.Body as any;
-        return reply.send(stream);
-      }
-
-      return reply.status(404).send({ error: 'Image not found' });
-    } catch (error: any) {
-      console.error('Error serving image:', error);
-      return reply.status(500).send({ error: 'Failed to serve image' });
     }
   });
 }

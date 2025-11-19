@@ -1,22 +1,15 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+// @ts-ignore - Cloudinary types are included in the package
+import { v2 as cloudinary } from 'cloudinary';
 import { env } from '../utils/env';
 import sharp from 'sharp';
-import { Readable } from 'stream';
 
-// For local development, we'll use a simple file-based approach
-// For production, use S3 SDK
-let s3Client: S3Client | null = null;
-
-if (env.S3_ENDPOINT) {
-  s3Client = new S3Client({
-    endpoint: env.S3_ENDPOINT,
-    region: env.S3_REGION,
-    credentials: {
-      accessKeyId: env.S3_ACCESS_KEY,
-      secretAccessKey: env.S3_SECRET_KEY,
-    },
-    forcePathStyle: true, // Required for MinIO
+// Configure Cloudinary
+if (env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET) {
+  cloudinary.config({
+    cloud_name: env.CLOUDINARY_CLOUD_NAME,
+    api_key: env.CLOUDINARY_API_KEY,
+    api_secret: env.CLOUDINARY_API_SECRET,
+    secure: true, // Use HTTPS
   });
 }
 
@@ -30,6 +23,10 @@ export async function uploadImage(
   filename: string,
   contentType: string
 ): Promise<UploadResult> {
+  if (!env.CLOUDINARY_CLOUD_NAME || !env.CLOUDINARY_API_KEY || !env.CLOUDINARY_API_SECRET) {
+    throw new Error('Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in environment variables.');
+  }
+
   // Validate image
   const image = sharp(buffer);
   const metadata = await image.metadata();
@@ -51,55 +48,65 @@ export async function uploadImage(
     .toBuffer();
 
   const timestamp = Date.now();
-  const thumbKey = `thumbnails/${timestamp}-${filename}`;
-  const fullKey = `full/${timestamp}-${filename}`;
+  const publicId = `floodrelief/${timestamp}-${filename.replace(/\.[^/.]+$/, '')}`;
+  const thumbPublicId = `${publicId}_thumb`;
 
-  if (s3Client) {
-    // Upload to S3/MinIO
-    await s3Client.send(
-      new PutObjectCommand({
-        Bucket: env.S3_BUCKET,
-        Key: thumbKey,
-        Body: thumbnail,
-        ContentType: 'image/jpeg',
-      })
-    );
+  try {
+    // Upload full image
+    const fullResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          public_id: publicId,
+          folder: 'floodrelief',
+          format: 'jpg',
+          transformation: [
+            { quality: 'auto:good' },
+            { fetch_format: 'auto' }
+          ]
+        },
+        (error: any, result: any) => {
+          if (error) reject(error);
+          else if (result) resolve(result as { secure_url: string });
+          else reject(new Error('Upload failed'));
+        }
+      ).end(fullImage);
+    });
 
-    await s3Client.send(
-      new PutObjectCommand({
-        Bucket: env.S3_BUCKET,
-        Key: fullKey,
-        Body: fullImage,
-        ContentType: 'image/jpeg',
-      })
-    );
+    // Upload thumbnail
+    const thumbResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          public_id: thumbPublicId,
+          folder: 'floodrelief/thumbnails',
+          format: 'jpg',
+          transformation: [
+            { quality: 'auto:good' },
+            { fetch_format: 'auto' }
+          ]
+        },
+        (error: any, result: any) => {
+          if (error) reject(error);
+          else if (result) resolve(result as { secure_url: string });
+          else reject(new Error('Thumbnail upload failed'));
+        }
+      ).end(thumbnail);
+    });
 
-    // Return URLs through API proxy for better access control
-    // Use backend API endpoint instead of direct MinIO URL
-    // For local dev, use localhost:3001, in production use the actual API URL
-    const apiBaseUrl = process.env.API_BASE_URL || env.CORS_ORIGIN?.replace(':3000', ':3001') || 'http://localhost:3001';
     return {
-      url: `${apiBaseUrl}/api/images/${env.S3_BUCKET}/${fullKey}`,
-      thumbnailUrl: `${apiBaseUrl}/api/images/${env.S3_BUCKET}/${thumbKey}`,
+      url: fullResult.secure_url,
+      thumbnailUrl: thumbResult.secure_url,
     };
-  } else {
-    // Fallback: return placeholder URLs (in production, always use S3)
-    // For local dev without MinIO, you might want to save to disk
-    throw new Error('S3 client not configured. Please set S3_ENDPOINT in environment variables. Make sure MinIO is running and bucket is created.');
+  } catch (error: any) {
+    console.error('Cloudinary upload error:', error);
+    throw new Error(`Failed to upload image: ${error.message || 'Unknown error'}`);
   }
 }
 
+// Legacy function for compatibility (not needed with Cloudinary)
 export async function getImageUrl(key: string): Promise<string> {
-  if (!s3Client) {
-    throw new Error('S3 client not configured');
-  }
-
-  const command = new GetObjectCommand({
-    Bucket: env.S3_BUCKET,
-    Key: key,
-  });
-
-  // Generate signed URL (valid for 1 hour)
-  return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+  // Cloudinary URLs are public, no need for signed URLs
+  // This function is kept for backward compatibility
+  throw new Error('getImageUrl is not needed with Cloudinary. Images are directly accessible via their URLs.');
 }
-

@@ -18,9 +18,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.490.0",
-    "@aws-sdk/s3-request-presigner": "^3.490.0",
     "@fastify/cors": "^9.0.1",
+    "cloudinary": "^1.41.0",
     "@fastify/multipart": "^8.0.0",
     "@fastify/rate-limit": "^9.1.0",
     "@prisma/client": "^5.7.1",
